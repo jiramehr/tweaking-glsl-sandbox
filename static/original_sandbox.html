@@ -1,53 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>GLSL Sandbox</title>
+		<title>GLSL Sandbox Original</title>
 		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 		<style>
 
-			body {
+			* {
+				box-sizing: border-box;
+			}
 
+			html {
+				height: 100%;
+			}
+
+			body {
 				background-color: #000000;
+				height: 100%;
 				margin: 0;
 				padding: 0;
-				overflow: hidden;
+			}
 
+			canvas {
+				display: block;
+				width: 100%;
+				height: 100%;
+				touch-action: none;
+				image-rendering: pixelated;
 			}
 
 			button, select, a, a:visited {
+				padding: 8px 12px;
 
-				padding: 8px 12px 8px 12px;
-
-				border: none;
+				border: 0px;
 				border-radius: 5px;
 				margin-right: 5px;
 
-				color: #ffffff;
+				color: #FFFFFF;
 				background-color: #000000;
-				opacity: 0.5;
 
-				font-family: Monospace;
-				font-size: 12px;
-				font-weight: bold;
+				font-family: monospace;
+				font-size: 11px;
 
 				cursor: pointer;
 				text-decoration: none;
 
+				text-transform: uppercase;
 			}
 
 			button:hover, select:hover, a:hover {
-
-				opacity: 1;
-				box-shadow: 0 0 4px #FFF;
-
+				background-color: #FFFFFF;
+				color: #000000;
 			}
 
-			option {
+			img {
+				padding: 4px;
+				border: 0px;
+				border-radius: 5px;
+				margin-right: 5px;
 
+				background-color: #000000;
+				vertical-align: middle;
+
+				cursor: pointer;
+			}
+
+				img:hover {
+					background-color: #FFFFFF;
+				}
+
+			option {
 				color: #ffffff;
 				background-color: #000000;
+			}
 
+			#toolbar {
+				transition: opacity 1s;
 			}
 
 		</style>
@@ -63,9 +91,9 @@
 		<script src="js/codemirror.js"></script>
 		<script src="js/glsl.js"></script>
 
-		<script id="example" type="x-shader/x-fragment">precision mediump float;
+		<script id="example" type="x-shader/x-fragment">#extension GL_OES_standard_derivatives : enable
 
-#extension GL_OES_standard_derivatives : enable
+precision highp float;
 
 uniform float time;
 uniform vec2 mouse;
@@ -87,7 +115,7 @@ void main( void ) {
 
 		<script id="fragmentShader" type="x-shader/x-fragment">
 
-			precision mediump float;
+			precision highp float;
 
 			uniform vec2 resolution;
 			uniform sampler2D texture;
@@ -132,66 +160,35 @@ void main( void ) {
 
 			initialize_helper();
 
-			var compressor=initialize_compressor();
-
-			if ( !window.requestAnimationFrame ) {
-
-				window.requestAnimationFrame = ( function() {
-
-					return window.webkitRequestAnimationFrame ||
-						window.mozRequestAnimationFrame ||
-						window.oRequestAnimationFrame ||
-						window.msRequestAnimationFrame ||
-						function ( callback, element ) {
-
-							window.setTimeout( callback, 1000 / 60 );
-
-						};
-
-				} )();
-
-			}
-
-			// Get older browsers safely through init code, so users can read the
-			// message about how to download newer browsers.
-			if (!Date.now) {
-				Date.now = function() {
-					return +new Date();
-				};
-			}
+			var compressor = initialize_compressor();
 
 			// Greetings to Iq/RGBA! ;)
 
-			var quality = 2, quality_levels = [ 0.5, 1, 2, 4, 8 ];
-			var toolbar, compileButton, fullscreenButton, compileTimer, errorLines = [];
-			var code, canvas, gl, buffer, currentProgram, vertexPosition, screenVertexPosition, panButton,
+			var quality = 2, quality_levels = [ 1, 2, 4, 8 ];
+			var toolbar, showButton, timeButton, compileButton, panButton, fullscreenButton, compileTimer, errorLines = [];
+			var code, canvas, gl, buffer, currentProgram, vertexPosition, screenVertexPosition,
 			parameters = { startTime: Date.now(), time: 0, mouseX: 0.5, mouseY: 0.5, screenWidth: 0, screenHeight: 0 },
 			surface = { centerX: 0, centerY: 0, width: 1, height: 1, isPanning: false, isZooming: false, lastX: 0, lastY: 0 },
-			frontTarget, backTarget, screenProgram, getWebGL, resizer = {}, compileOnChangeCode = true;
+			frontTarget, backTarget, screenProgram, getWebGL, compileOnChangeCode = true;
 
 			init();
-			if (gl) { animate(); }
+
+			if ( gl ) animate();
 
 			function init() {
 
-				if (!document.addEventListener) {
-					document.location = 'http://get.webgl.org/';
-					return;
-				}
-
 				canvas = document.createElement( 'canvas' );
-				canvas.style.display = 'block';
 				document.body.appendChild( canvas );
 
 				//
 
-
-				//
-
 				toolbar = document.createElement( 'div' );
+				toolbar.id = 'toolbar';
 				toolbar.style.position = 'absolute';
-				toolbar.style.top = '25px';
-				toolbar.style.left = '25px';
+				toolbar.style.top = '0px';
+				toolbar.style.padding = '25px';
+				toolbar.style.paddingTop = 'max(25px, env(safe-area-inset-top))'; // handle hole-punch camera & notch
+				toolbar.style.width = '100%';
 				document.body.appendChild( toolbar );
 
 				var rightside = document.createElement( 'div' );
@@ -205,17 +202,31 @@ void main( void ) {
 				panButton.title = "Pan: left-drag, Zoom: right-drag. Use 'hide code' for a large pan/zoom area.";
 				rightside.appendChild( panButton );
 
-				fullscreenButton = document.createElement( 'button' );
-				fullscreenButton.textContent = 'fullscreen';
+				fullscreenButton = document.createElement( 'img' );
+				fullscreenButton.src = 'img/fullscreen.svg';
 				fullscreenButton.title = 'Press F11 to enter or leave fullscreen mode';
 				fullscreenButton.addEventListener( 'click', function ( event ) {
 
-					if (document.body.requestFullScreen) {
-						document.body.requestFullScreen();
-					} else if (document.body.mozRequestFullScreen) {
-						document.body.mozRequestFullScreen();
-					} else if (document.body.webkitRequestFullScreen) {
-						document.body.webkitRequestFullScreen( Element.ALLOW_KEYBOARD_INPUT );
+					if ( document.fullscreenElement ) {
+
+						document.exitFullscreen();
+						return;
+
+					} else if ( document.webkitFullscreenElement /* Safari */ ) {
+
+						document.webkitExitFullscreen();
+						return;
+
+					}
+
+					if ( document.documentElement.requestFullscreen ) {
+
+						document.documentElement.requestFullscreen( { navigationUI: 'hide' } );
+
+					} else if ( document.documentElement.webkitRequestFullscreen /* Safari */ ) {
+
+						document.documentElement.webkitRequestFullscreen();
+
 					}
 
 				}, false );
@@ -223,42 +234,45 @@ void main( void ) {
 				rightside.appendChild( fullscreenButton );
 
 				var button = document.createElement( 'a' );
+				button.style.marginRight = '0px';
 				button.textContent = 'gallery';
-				button.href = '/';
+
+				if ( document.referrer.startsWith( 'https://glslsandbox.com/' ) ) {
+
+					button.href = 'javascript:window.history.go( -1 )';
+
+				} else {
+
+					button.href = '/';
+
+				}
+
 				rightside.appendChild( button );
 
-				var button = document.createElement( 'button' );
-				button.textContent = 'hide code';
-				button.addEventListener( 'click', function ( event ) {
+				showButton = document.createElement( 'button' );
+				showButton.textContent = 'show code';
+				showButton.addEventListener( 'click', function () {
 
-					if ( isCodeVisible() ) {
-
-						button.textContent = 'show code';
-						code.getWrapperElement().style.display = 'none';
-						compileButton.style.visibility = 'hidden';
-						set_save_button('hidden');
-						set_parent_button('hidden');
-						stopHideUI();
-
-					} else {
-
-						button.textContent = 'hide code';
-						code.getWrapperElement().style.display = '';
-						compileButton.style.visibility = 'visible';
-						set_save_button('visible');
-						set_parent_button('visible');
-
-					}
+					isCodeVisible() ? hideCode() : showCode();
 
 				}, false );
-				toolbar.appendChild( button );
+				toolbar.appendChild( showButton );
+
+				timeButton = document.createElement( 'button' );
+				timeButton.textContent = '0:00.00';
+				timeButton.addEventListener( 'click', function ( event ) {
+
+					parameters.startTime = Date.now();
+
+				}, false );
+				toolbar.appendChild( timeButton );
 
 				var select = document.createElement( 'select' );
 
 				for ( var i = 0; i < quality_levels.length; i ++ ) {
 
 					var option = document.createElement( 'option' );
-					option.textContent = quality_levels[ i ];
+					option.textContent = quality_levels[ i ] + 'x';
 					if ( quality_levels[ i ] == quality ) option.selected = true;
 					select.appendChild( option );
 
@@ -274,7 +288,7 @@ void main( void ) {
 				toolbar.appendChild( select );
 
 				compileButton = document.createElement( 'button' );
-				compileButton.textContent = 'compile';
+				compileButton.textContent = 'compiled';
 				compileButton.addEventListener( 'click', function ( event ) {
 
 					compile();
@@ -289,18 +303,14 @@ void main( void ) {
 
 				try {
 
-					gl = canvas.getContext( 'experimental-webgl', { preserveDrawingBuffer: true } );
+					gl = canvas.getContext( 'webgl', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: true } );
 
 				} catch( error ) { }
 
-				if ( !gl ) {
-
-					alert("WebGL not supported, but code will be shown.");
-
-				} else {
+				if ( gl ) {
 
 					// enable dFdx, dFdy, fwidth
-					gl.getExtension('OES_standard_derivatives');
+					gl.getExtension( 'OES_standard_derivatives' );
 
 					// Create vertex buffer (2 triangles)
 
@@ -311,6 +321,11 @@ void main( void ) {
 					// Create surface buffer (coordinates at screen corners)
 
 					surface.buffer = gl.createBuffer();
+
+				} else {
+
+					alert( 'WebGL not supported, but code will be shown.' );
+
 				}
 
 				// initialize code editor
@@ -328,29 +343,6 @@ void main( void ) {
 						}
 					}
 				});
-				code.getWrapperElement().style.display = '';
-
-				resizer.offsetMouseX = 0;
-				resizer.offsetMouseY = 0;
-				resizer.isResizing = false;
-				resizer.currentWidth = 100;
-				resizer.currentHeight = 100;
-				resizer.minWidth = 100;
-				resizer.minHeight = 100;
-				resizer.maxWidth = 100;
-				resizer.maxHeight = 100;
-				resizer.element = document.createElement( 'div' );
-				resizer.element.className = 'resizer';
-				code.getWrapperElement().appendChild(resizer.element);
-
-				resizer.element.addEventListener( 'mousedown', function ( event ) {
-					if (event.button !== 2) {
-						resizer.offsetMouseX = event.clientX - resizer.currentWidth;
-						resizer.offsetMouseY = event.clientY - resizer.currentHeight;
-						resizer.isResizing = true;
-						event.preventDefault();
-					}
-				}, false );
 
 				if (gl) {
 
@@ -384,13 +376,14 @@ void main( void ) {
 					canvas.addEventListener( 'mousedown', surfaceMouseDown, false );
 					panButton.addEventListener( 'mousedown', surfaceMouseDown, false );
 
-					canvas.addEventListener( 'contextmenu', noContextMenu, false);
-					panButton.addEventListener( 'contextmenu', noContextMenu, false);
+					canvas.addEventListener( 'contextmenu', noContextMenu, false );
+					panButton.addEventListener( 'contextmenu', noContextMenu, false );
+
 				}
 
 				var clientXLast, clientYLast;
 
-				document.addEventListener( 'mousemove', function ( event ) {
+				document.addEventListener( 'pointermove', function ( event ) {
 
 					var clientX = event.clientX;
 					var clientY = event.clientY;
@@ -408,17 +401,7 @@ void main( void ) {
 					parameters.mouseX = clientX / window.innerWidth;
 					parameters.mouseY = 1 - clientY / window.innerHeight;
 
-					if (resizer.isResizing) {
-
-						resizer.currentWidth = Math.max(Math.min(clientX - resizer.offsetMouseX, resizer.maxWidth), resizer.minWidth);
-						resizer.currentHeight = Math.max(Math.min(clientY - resizer.offsetMouseY, resizer.maxHeight), resizer.minWidth);
-						codeElement = code.getWrapperElement();
-						codeElement.style.width = resizer.currentWidth + 'px';
-						codeElement.style.height = resizer.currentHeight + 'px';
-						code.refresh();
-						event.preventDefault();
-
-					} else if (surface.isPanning) {
+					if (surface.isPanning) {
 
 						dx = clientX - surface.lastX;
 						dy = clientY - surface.lastY;
@@ -440,10 +423,11 @@ void main( void ) {
 						event.preventDefault();
 
 					}
+
 				}, false );
 
 				function settleDown ( event ) {
-					resizer.isResizing = surface.isPanning = surface.isZooming = false;
+					surface.isPanning = surface.isZooming = false;
 					document.body.style.cursor = 'default';
 					panButton.style.cursor = 'move';
 				}
@@ -464,10 +448,37 @@ void main( void ) {
 
 				compileScreenProgram();
 
+				// show code when is new effect
+
+				location.hash === '' ? showCode() : hideCode();
+
+			}
+
+			function showCode() {
+
+				showButton.textContent = 'hide code';
+				code.getWrapperElement().style.visibility = 'visible';
+				compileButton.style.visibility = 'visible';
+				set_save_button('visible');
+				set_parent_button('visible');
+
+			}
+
+			function hideCode() {
+
+				showButton.textContent = 'show code';
+				code.getWrapperElement().style.visibility = 'hidden';
+				compileButton.style.visibility = 'hidden';
+				set_save_button('hidden');
+				set_parent_button('hidden');
+				stopHideUI();
+
 			}
 
 			function isCodeVisible() {
-				return code && code.getWrapperElement().style.display !== 'none';
+
+				return code && code.getWrapperElement().style.visibility === 'visible';
+
 			}
 
 			var hideUITimer;
@@ -477,7 +488,7 @@ void main( void ) {
 
 				stopHideUITimer();
 				if (!isUIHidden && !isCodeVisible())
-					hideUITimer = window.setTimeout(onHideUITimer, 1000 * 5 );
+					hideUITimer = window.setTimeout(onHideUITimer, 1000 * 3 );
 
 				function onHideUITimer() {
 
@@ -485,7 +496,7 @@ void main( void ) {
 					if (!isUIHidden && !isCodeVisible()) {
 
 						isUIHidden = true;
-						toolbar.style.display = 'none';
+						toolbar.style.opacity = '0';
 						document.body.style.cursor = 'none';
 					}
 				}
@@ -505,7 +516,7 @@ void main( void ) {
 				if (isUIHidden) {
 
 					isUIHidden = false;
-					toolbar.style.display = '';
+					toolbar.style.opacity = '1';
 					document.body.style.cursor = '';
 				}
 				startHideUITimer();
@@ -582,6 +593,8 @@ void main( void ) {
 
 				if ( !gl.getProgramParameter( program, gl.LINK_STATUS ) ) {
 
+					showCode();
+
 					var error = gl.getProgramInfoLog( program );
 
 					compileButton.title = error;
@@ -589,7 +602,7 @@ void main( void ) {
 
 					console.error( 'VALIDATE_STATUS: ' + gl.getProgramParameter( program, gl.VALIDATE_STATUS ), 'ERROR: ' + gl.getError() );
 					compileButton.style.color = '#ff0000';
-					compileButton.textContent = 'compiled with errors';
+					compileButton.textContent = 'errors';
 
 					set_save_button('hidden');
 
@@ -607,11 +620,11 @@ void main( void ) {
 				currentProgram = program;
 
 				compileButton.style.color = '#00ff00';
-				compileButton.textContent = 'compiled successfully';
+				compileButton.textContent = 'compiled';
 
-				set_save_button('visible');
+				set_save_button( 'visible' );
 
-				panButton.style.display = (fragment.indexOf('varying vec2 surfacePosition;') >= 0) ? 'inline' : 'none';
+				panButton.style.display = fragment.indexOf( 'varying vec2 surfacePosition;' ) >= 0 ? 'inline' : 'none';
 
 				// Cache uniforms
 
@@ -627,10 +640,10 @@ void main( void ) {
 
 				// Set up buffers
 
-				surface.positionAttribute = gl.getAttribLocation(currentProgram, "surfacePosAttrib");
-				gl.enableVertexAttribArray(surface.positionAttribute);
+				surface.positionAttribute = gl.getAttribLocation( currentProgram, "surfacePosAttrib" );
+				gl.enableVertexAttribArray( surface.positionAttribute );
 
-				vertexPosition = gl.getAttribLocation(currentProgram, "position");
+				vertexPosition = gl.getAttribLocation( currentProgram, "position" );
 				gl.enableVertexAttribArray( vertexPosition );
 
 			}
@@ -656,6 +669,8 @@ void main( void ) {
 
 				if ( !gl.getProgramParameter( program, gl.LINK_STATUS ) ) {
 
+					showCode();
+
 					console.error( 'VALIDATE_STATUS: ' + gl.getProgramParameter( program, gl.VALIDATE_STATUS ), 'ERROR: ' + gl.getError() );
 
 					return;
@@ -669,7 +684,7 @@ void main( void ) {
 				cacheUniformLocation( program, 'resolution' );
 				cacheUniformLocation( program, 'texture' );
 
-				screenVertexPosition = gl.getAttribLocation(screenProgram, "position");
+				screenVertexPosition = gl.getAttribLocation( screenProgram, "position" );
 				gl.enableVertexAttribArray( screenVertexPosition );
 
 			}
@@ -772,6 +787,8 @@ void main( void ) {
 
 				if ( !gl.getShaderParameter( shader, gl.COMPILE_STATUS ) ) {
 
+					showCode();
+
 					var error = gl.getShaderInfoLog( shader );
 
 					// Remove trailing linefeed, for FireFox's benefit.
@@ -783,7 +800,7 @@ void main( void ) {
 					console.error( error );
 
 					compileButton.style.color = '#ff0000';
-					compileButton.textContent = 'compiled with errors';
+					compileButton.textContent = 'errors';
 
 					set_save_button('hidden');
 
@@ -817,46 +834,22 @@ void main( void ) {
 
 			function onWindowResize( event ) {
 
-				var isMaxWidth = ((resizer.currentWidth === resizer.maxWidth) || (resizer.currentWidth === resizer.minWidth)),
-					isMaxHeight = ((resizer.currentHeight === resizer.maxHeight) || (resizer.currentHeight === resizer.minHeight));
-
-				toolbar.style.width = window.innerWidth - 47 + 'px';
-
-				resizer.isResizing = false;
-				resizer.maxWidth = window.innerWidth - 75;
-				resizer.maxHeight = window.innerHeight - 125;
-				if (isMaxWidth || (resizer.currentWidth > resizer.maxWidth)) {
-					resizer.currentWidth = resizer.maxWidth;
-				}
-				if (isMaxHeight || (resizer.currentHeight > resizer.maxHeight)) {
-					resizer.currentHeight = resizer.maxHeight;
-				}
-				if (resizer.currentWidth < resizer.minWidth) { resizer.currentWidth = resizer.minWidth; }
-				if (resizer.currentHeight < resizer.minHeight) { resizer.currentHeight = resizer.minHeight; }
-
-				code.getWrapperElement().style.top = '75px';
-				code.getWrapperElement().style.left = '25px';
-				code.getWrapperElement().style.width = resizer.currentWidth + 'px';
-				code.getWrapperElement().style.height = resizer.currentHeight + 'px';
-
 				canvas.width = window.innerWidth / quality;
 				canvas.height = window.innerHeight / quality;
-
-				canvas.style.width = window.innerWidth + 'px';
-				canvas.style.height = window.innerHeight + 'px';
 
 				parameters.screenWidth = canvas.width;
 				parameters.screenHeight = canvas.height;
 
 				computeSurfaceCorners();
 
-				if (gl) {
+				if ( gl ) {
 
 					gl.viewport( 0, 0, canvas.width, canvas.height );
 
 					createRenderTargets();
 
 				}
+
 			}
 
 			//
@@ -873,6 +866,8 @@ void main( void ) {
 				if ( !currentProgram ) return;
 
 				parameters.time = Date.now() - parameters.startTime;
+
+				timeButton.textContent = parseTime( parameters.time );
 
 				// Set uniforms for custom shader
 
@@ -925,6 +920,16 @@ void main( void ) {
 				var tmp = frontTarget;
 				frontTarget = backTarget;
 				backTarget = tmp;
+
+			}
+
+			// utils
+
+			function parseTime( ms ) {
+
+				const minutes = Math.floor( ms / 60000 );
+				const seconds = ( ( ms % 60000 ) / 1000 ).toFixed( 2 ).padStart( 5, '0' );
+				return `${ minutes }:${ seconds }`;
 
 			}
 
