@@ -1,90 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>GLSL Sandbox BreakUp</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-		<style>
 
-			* {
-				box-sizing: border-box;
-			}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Decomposition Index</title>
+	<style>
 
-			html {
-				height: 100%;
-			}
+		* {
+			box-sizing: border-box;
+		}
 
-			body {
-				background-color: #000000;
-				height: 100%;
-				margin: 0;
-				padding: 0;
-			}
+		html {
+			height: 100%;
+		}
 
-			canvas {
-				display: block;
-				width: 100%;
-				height: 100%;
-				touch-action: none;
-				image-rendering: pixelated;
-			}
+		main {
+			font-family: 'Arial', sans-serif;
+			color: #ffffff;
+			text-align: justify;
+			line-height: 1.6;
+			max-width: 800px; /* Or whatever maximum width you prefer */
+			margin: 0 auto; /* This centers your main content horizontally */
+			padding: 20px;
+		  }
+		  
+		header {
+			font-family: 'Arial', sans-serif;
+			text-align: center; /* Center text horizontally */
+		}
+		
+		body {
+			background-color: #000000;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			color: #fff; /* Or any light color */
+			font-size: 16px; /* Adjust as needed */
+		}
 
-			button, select, a, a:visited {
-				padding: 8px 12px;
+		#toolbar {
+			display: none;
+		}
+		
+		.CodeMirror {
+			display: none;
+		}
+		  
+		canvas {
+			position: absolute;
+			z-index: -1;
+			display: block;
+			width: 100%;
+			height: 100%;
+			touch-action: none;
+			image-rendering: pixelated;
+		}
+	</style>
+</head>
 
-				border: 0px;
-				border-radius: 5px;
-				margin-right: 5px;
-
-				color: #FFFFFF;
-				background-color: #000000;
-
-				font-family: monospace;
-				font-size: 11px;
-
-				cursor: pointer;
-				text-decoration: none;
-
-				text-transform: uppercase;
-			}
-
-			button:hover, select:hover, a:hover {
-				background-color: #FFFFFF;
-				color: #000000;
-			}
-
-			img {
-				padding: 4px;
-				border: 0px;
-				border-radius: 5px;
-				margin-right: 5px;
-
-				background-color: #000000;
-				vertical-align: middle;
-
-				cursor: pointer;
-			}
-
-				img:hover {
-					background-color: #FFFFFF;
-				}
-
-			option {
-				color: #ffffff;
-				background-color: #000000;
-			}
-
-			#toolbar {
-				transition: opacity 1s;
-			}
-
-		</style>
-	</head>
-	<body>
-
-		<link rel="stylesheet" href="css/codemirror.css">
-		<link rel="stylesheet" href="css/default.css">
-
+<body>
 		<script src="js/lzma.js"></script>
 		<script src='js/jquery.js'></script>
 		<script src='js/helpers.js'></script>
@@ -221,7 +196,7 @@ void main( void ) {
 
 				panButton = document.createElement( 'button' );
 				panButton.textContent = 'pan/zoom';
-				panButton.style.cursor = 'move';
+				panButton.style.cursor = 'default';
 				panButton.style.display = 'none';
 				panButton.title = "Pan: left-drag, Zoom: right-drag. Use 'hide code' for a large pan/zoom area.";
 				rightside.appendChild( panButton );
@@ -372,36 +347,13 @@ void main( void ) {
 
 					var surfaceMouseDown = function ( event ) {
 
-						if (event.shiftKey) {
-							resetSurface();
-						}
-
-						if (event.button === 0) {
-							surface.isPanning = true;
-							document.body.style.cursor = 'move';
-						} else {
-							surface.isZooming = true;
-							document.body.style.cursor = 'se-resize';
-							panButton.style.cursor = 'se-resize';
-						}
-
-						surface.lastX = event.clientX;
-						surface.lastY = event.clientY;
-						event.preventDefault();
-
 					};
 
 					var noContextMenu = function ( event ) {
 
-						event.preventDefault();
+						//event.preventDefault();
 
 					};
-
-					canvas.addEventListener( 'mousedown', surfaceMouseDown, false );
-					panButton.addEventListener( 'mousedown', surfaceMouseDown, false );
-
-					canvas.addEventListener( 'contextmenu', noContextMenu, false );
-					panButton.addEventListener( 'contextmenu', noContextMenu, false );
 
 				}
 
@@ -958,6 +910,35 @@ void main( void ) {
 			}
 
 		</script>
+    <header>
+        <h1>Decomposition Index</h1>
+    </header>
 
-	</body>
+    <main>
+        <p>Studying the mercurial behavior of the default visulation in GLSL Sandbox by mrdoobs, and tweaking it to my liking for website background design.</p>
+
+        <nav>
+            <h2>Pages:</h2>
+            <ul>
+                <li><a href="original_sandbox.html">GLSL Sandbox original default demo graphics</a></li>
+                <li><a href="functions_breakdown.html">Breaking down the function</a>
+                <li><a href="issue1_oscillating_WF.html">Issue #1. Racing fronts at high wave numbers:</a> in order to fit more wavelengths inside 
+                    the viewport one can increase the cooefficient that multiplies by either dimension aka <em>the wave number</em>. However, since
+                    in the default code the wave number is oscillating it will go to zero and and change sign over a finite period of time determined 
+                    by the coefficeint multiplied by the time. This effect hugely dimineshes the calming characteristics of the original visualization
+                    and needs to be addressed as I am interested in shoerter wavelengths.</li>
+                    <ul>
+                        <li><a href="issue1_appr1.html">Approach 1:</a> Ading an offset to avoid zero.</li>
+                        <li><a href="issue1_appr2.html">Approach 2:</a> Summing with a travelling wave term with oscillating direction and .</li>
+                    </ul></li>
+                <li><a href="perspective.html">Adding a slight bit of foreshortening.</a></li>
+                <li><a href="perspective2.html">Increasing darkness with distance.</a></li>
+                <li><a href="website.html">My page</a></li>
+                <!-- Add more links as needed -->
+            </ul>
+        </nav>
+    </main>
+
+</body>
+
 </html>
